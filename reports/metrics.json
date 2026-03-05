@@ -1,0 +1,19 @@
+{
+    "baseline": {
+        "label": "Baseline",
+        "MAE": 6.8893,
+        "RMSE": 7.8009,
+        "R2": -0.0036
+    },
+    "linear_regression": {
+        "label": "Linear Regression",
+        "MAE": 6.9299,
+        "RMSE": 7.8385,
+        "R2": -0.0133
+    },
+    "improvement": {
+        "MAE_improvement": -0.0406,
+        "RMSE_improvement": -0.0376,
+        "R2_improvement": -0.0097
+    }
+}

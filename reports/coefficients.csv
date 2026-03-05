@@ -1,0 +1,11 @@
+Feature,Coefficient,Direction
+Diet_High Sugar,0.8179,longer cycle
+Diet_Balanced,0.7266,longer cycle
+Exercise Frequency_High,0.6931,longer cycle
+Exercise Frequency_Moderate,0.4707,longer cycle
+Diet_Low Carb,0.3352,longer cycle
+Age,-0.3301,shorter cycle
+BMI,0.2969,longer cycle
+Sleep Hours,0.2846,longer cycle
+Period Length,-0.1997,shorter cycle
+Stress Level,0.1484,longer cycle
