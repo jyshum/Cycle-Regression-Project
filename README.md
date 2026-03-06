@@ -16,17 +16,21 @@ on personal cycle history?
 **No — not meaningfully.**
 
 The model achieves R² ≈ 0 and MAE of ~6.93 days, performing no better than
-predicting the population mean for every individual. This is a valid scientific
-finding: the selected features carry negligible predictive signal for cycle
-length at the population level.
+predicting the population mean for every individual. Exploratory data analysis
+confirmed this before any modeling: every numeric feature has a near-zero
+correlation with cycle length (|r| ≤ 0.04), and categorical boxplots show
+heavy overlap across all exercise and diet categories. This is a valid
+scientific finding — the selected features carry negligible predictive signal
+for cycle length at the population level.
 
 ---
 
 ## Dataset
 
 - **Source:** [Menstrual Cycle Data with Factors — Kaggle](https://www.kaggle.com/datasets/akshayas02/menstrual-cycle-data-with-factors-dataset)
-- **Size:** 895 rows · 100 unique users · ~9 cycles per user
+- **Size:** 895 rows · 100 unique users · 6–12 cycles per user (mean: ~9)
 - **Structure:** Longitudinal — multiple cycle records per person
+- **Nulls:** None — no imputation required
 
 ---
 
@@ -42,7 +46,33 @@ length at the population level.
 | Exercise Frequency | Categorical | One-hot (baseline: Low) |
 | Diet | Categorical | One-hot (baseline: Vegetarian) |
 
-**Target:** `Cycle Length` (days)
+**Target:** `Cycle Length` (days, range: 25–50, mean: 37.4, std: 7.5)
+
+---
+
+## Exploratory Data Analysis
+
+EDA was conducted in `notebooks/01_eda.ipynb` before any modeling.
+
+**Target distribution** — Cycle length is spread uniformly across 25–50 days
+with no outliers. The lack of a dominant central peak means the mean is a
+surprisingly competitive baseline — there is no obvious cluster for a model
+to exploit.
+
+**Numeric features** — All five numeric features show near-zero Pearson
+correlation with cycle length (highest: Sleep Hours at r = 0.04). Scatterplots
+confirm flat trend lines across every feature with no hidden non-linear signal.
+Stress Level and Period Length show discrete vertical striping, confirming
+their ordinal nature.
+
+**Categorical features** — Exercise Frequency and Diet are reasonably balanced
+across categories. Boxplots show heavy overlap in cycle length distributions
+across all exercise and diet groups — no category meaningfully separates
+cycle lengths from the rest.
+
+**Correlation heatmap** — The bottom row (Cycle Length correlations) is
+entirely near-zero, confirming that no available feature has a linear
+relationship with the target worth modeling.
 
 ---
 
@@ -51,7 +81,7 @@ length at the population level.
 ### Data Splitting — GroupShuffleSplit
 The dataset contains multiple rows per user. A naive random split would place
 the same user in both train and test — leaking information and inflating
-performance. We use `GroupShuffleSplit` to ensure all rows for a given user
+apparent performance. `GroupShuffleSplit` ensures all rows for a given user
 go entirely to one split.
 ```
 Train: 706 rows (80 users)
@@ -59,9 +89,9 @@ Test:  189 rows (20 users)
 ```
 
 ### Baseline Model
-Before training any model, we establish a naive baseline: predict the mean
-cycle length of the training set for every test sample. Any model that cannot
-beat this has learned nothing useful.
+Before training, a naive baseline is established: predict the mean cycle
+length of the training set for every test sample. Any model that cannot beat
+this has learned nothing useful.
 ```
 Baseline mean prediction: 37.27 days
 ```
@@ -82,8 +112,10 @@ full dataset would leak test distribution information into training.
 | R² | ~0.00 | -0.013 | -0.010 ❌ |
 
 The linear regression model does not outperform the mean baseline on any
-metric. The model's predictions cluster tightly between 35.5–38.5 days for
-all test samples — it fails to differentiate meaningfully between individuals.
+metric. Predictions cluster tightly between 35.5–38.5 days for all test
+samples — the model fails to differentiate meaningfully between individuals.
+This outcome was consistent with EDA findings, where all feature correlations
+with cycle length were effectively zero before modeling began.
 
 ---
 
@@ -92,8 +124,10 @@ all test samples — it fails to differentiate meaningfully between individuals.
 ![Residual Plot](reports/residual_plot.png)
 
 Residuals are large (±10–12 days) and symmetric around zero. The narrow
-prediction range (3 days) relative to the actual range (25–50 days) confirms
-the model has found no meaningful signal in the available features.
+prediction range (3 days) relative to the actual target range (25 days)
+confirms the model found no meaningful signal. The symmetry rules out
+systematic bias — the model is not consistently over or under predicting,
+it simply cannot differentiate between individuals.
 
 ---
 
@@ -112,9 +146,11 @@ the model has found no meaningful signal in the available features.
 | Period Length | -0.200 | shorter cycle |
 | Stress Level | +0.148 | longer cycle |
 
-Coefficients are on standardized scale. No single feature exerts strong
-influence — the largest coefficient (0.818) is small in the context of a
-target with standard deviation of ~7.5 days.
+Coefficients are on a standardized scale. No single feature exerts meaningful
+influence — the largest coefficient (0.818) is small relative to the target
+standard deviation of 7.5 days. Diet and exercise dominate weakly over
+demographic features, consistent with their slightly larger boxplot separation
+observed in EDA.
 
 ---
 
@@ -124,6 +160,8 @@ cycle-regression-project/
 ├── data/
 │   ├── raw/                  # original Kaggle CSV (unmodified)
 │   └── processed/            # cleaned outputs
+├── notebooks/
+│   └── 01_eda.ipynb          # EDA — distributions, correlations, boxplots
 ├── src/
 │   ├── preprocess.py         # cleaning, encoding, splitting, scaling
 │   ├── train.py              # baseline + linear regression training
@@ -159,6 +197,9 @@ python main.py
 
 # 5. Run tests
 python -m pytest tests/test_preprocess.py -v
+
+# 6. Open EDA notebook
+jupyter notebook notebooks/01_eda.ipynb
 ```
 
 ---
@@ -167,20 +208,22 @@ python -m pytest tests/test_preprocess.py -v
 
 - **No cycle history features** — prior cycle length is the strongest known
   predictor of next cycle length. This project intentionally excludes it to
-  isolate the contribution of lifestyle/demographic factors alone.
+  isolate the contribution of lifestyle and demographic factors alone.
 - **Small unique user count** — 100 users limits generalizability.
-- **Self-reported data** — stress, sleep, and diet labels may be imprecise.
-- **Linear model only** — non-linear relationships (e.g. Age²) were not explored.
+- **Self-reported data** — stress, sleep, and diet labels may lack precision.
+- **Linear model only** — non-linear relationships (e.g. Age², BMI²) not explored.
+- **Synthetic dataset** — the Kaggle dataset may not reflect real-world
+  population distributions, which could affect the generalizability of findings.
 
 ---
 
 ## Future Work
 
-- Add EDA notebook with distribution plots and correlation heatmap
 - Test polynomial features (Age², BMI²) to capture non-linear effects
 - Compare R² against a model that includes previous cycle length — quantify
   how much history improves prediction
-- Try Ridge/Lasso regression to assess whether regularization helps
+- Try Ridge and Lasso regression to assess whether regularization helps
+- Validate findings on a real-world clinical dataset
 
 ---
 
@@ -191,29 +234,6 @@ python -m pytest tests/test_preprocess.py -v
 - pandas
 - numpy
 - matplotlib
+- seaborn
 - pytest
-```
-
----
-
-## ✅ Your Action Items
-
-**1.** Save as `README.md` at the project root
-
-**2.** Update your `requirements.txt` to match what you actually installed:
-```
-scikit-learn
-pandas
-numpy
-matplotlib
-pytest
-```
-
-**3.** Make sure `data/raw/` is in your `.gitignore` if you plan to push to GitHub — never commit raw data files publicly, especially health data:
-```
-# .gitignore
-data/raw/
-models/
-.venv/
-__pycache__/
-.pytest_cache/
+- jupyter
