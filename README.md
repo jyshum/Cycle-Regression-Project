@@ -82,7 +82,7 @@ relationship with the target worth modeling.
 The dataset contains multiple rows per user. A naive random split would place
 the same user in both train and test — leaking information and inflating
 apparent performance. `GroupShuffleSplit` ensures all rows for a given user
-go entirely to one split.
+go entirely to one split. Row counts are approximate rather than exact because splitting by user identity(6–12 rows each) cannot guarantee a precise row-level ratio.
 ```
 Train: 706 rows (80 users)
 Test:  189 rows (20 users)
@@ -100,6 +100,13 @@ Baseline mean prediction: 37.27 days
 Numeric features are standardized using `StandardScaler` fit **on training
 data only**. The same fitted scaler transforms the test set. Fitting on the
 full dataset would leak test distribution information into training.
+
+Categorical features are one-hot encoded with one category dropped per feature
+to avoid the dummy variable trap — perfect multicollinearity where one column
+is always predictable from the others, destabilizing model coefficients.
+Baselines were chosen explicitly (`drop_first=False`) rather than
+alphabetically, preserving interpretability: coefficients represent effects
+*compared to Low exercise and Vegetarian diet*.
 
 ---
 
@@ -127,7 +134,9 @@ Residuals are large (±10–12 days) and symmetric around zero. The narrow
 prediction range (3 days) relative to the actual target range (25 days)
 confirms the model found no meaningful signal. The symmetry rules out
 systematic bias — the model is not consistently over or under predicting,
-it simply cannot differentiate between individuals.
+it simply cannot differentiate between individuals. The x-axis spans only 3 days (35.5–38.5) despite the actual target ranging
+25 days (25–50) — the model assigns nearly identical predictions to all
+individuals, further confirming the absence of meaningful feature signal.
 
 ---
 

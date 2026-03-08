@@ -13,4 +13,5 @@ __pycache__/
 .pytest_cache/
 
 # macOS system file — not part of your project
-.DS_Store
+.DS_Store.ipynb_checkpoints/
+.ipynb_checkpoints/
